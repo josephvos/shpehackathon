@@ -1,6 +1,6 @@
-C:\Users\caleb\Downloads\SHPEHackathon\backend\src\main\java\com\example\translator\dto\SubtitleTranslateRequest.java
-C:\Users\caleb\Downloads\SHPEHackathon\backend\src\main\java\com\example\translator\dto\SubtitleTranslateResponse.java
-C:\Users\caleb\Downloads\SHPEHackathon\backend\src\main\java\com\example\translator\VideoTranslatorApplication.java
-C:\Users\caleb\Downloads\SHPEHackathon\backend\src\main\java\com\example\translator\controller\TranslateController.java
-C:\Users\caleb\Downloads\SHPEHackathon\backend\src\main\java\com\example\translator\dto\SubtitleLine.java
-C:\Users\caleb\Downloads\SHPEHackathon\backend\src\main\java\com\example\translator\service\VideoService.java
+/Users/joeyv/Documents/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/service/VideoService.java
+/Users/joeyv/Documents/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/VideoTranslatorApplication.java
+/Users/joeyv/Documents/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/controller/TranslateController.java
+/Users/joeyv/Documents/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/SubtitleTranslateRequest.java
+/Users/joeyv/Documents/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/SubtitleTranslateResponse.java
+/Users/joeyv/Documents/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/SubtitleLine.java

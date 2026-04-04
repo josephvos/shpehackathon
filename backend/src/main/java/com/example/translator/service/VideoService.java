@@ -46,12 +46,27 @@ public class VideoService {
 
         List<SubtitleLine> translated = new ArrayList<>();
 
-        int limit = Math.min(transcript.items().size(), 15); // temporary test limit
-        for (int i = 0; i < limit; i++) {
+        // Translate all available transcript lines
+        int totalLines = transcript.items().size();
+        System.out.println("STEP 3: Starting translation of " + totalLines + " lines...");
+        
+        long startTime = System.currentTimeMillis();
+        
+        for (int i = 0; i < totalLines; i++) {
             SubtitleLine line = transcript.items().get(i);
             String translatedText = translateText(line.getText(), transcript.language(), targetLang);
             translated.add(new SubtitleLine(translatedText, line.getStart(), line.getDuration()));
-            System.out.println("STEP 3: Translated line " + (i + 1) + " / " + limit);
+            
+            // Progress logging with percentage and estimated time
+            int progress = ((i + 1) * 100) / totalLines;
+            if ((i + 1) % Math.max(1, totalLines / 20) == 0 || i == totalLines - 1) { // Log every 5%
+                long elapsed = System.currentTimeMillis() - startTime;
+                long avgTimePerLine = elapsed / (i + 1);
+                long remaining = (totalLines - i - 1) * avgTimePerLine;
+                
+                System.out.printf("STEP 3: Translation progress %d%% (%d/%d) - ETA: %d seconds%n", 
+                    progress, i + 1, totalLines, remaining / 1000);
+            }
         }
 
         System.out.println("STEP 4: Translation finished");
@@ -67,7 +82,7 @@ public class VideoService {
 
     private TranscriptResult fetchTranscriptFromPython(String videoId) {
         try {
-            ProcessBuilder pb = new ProcessBuilder("python", "scripts/get_transcript.py", videoId);
+            ProcessBuilder pb = new ProcessBuilder("python", "../scripts/get_transcript.py", videoId);
             pb.redirectErrorStream(false);
 
             Process process = pb.start();
@@ -121,24 +136,34 @@ public class VideoService {
     private String translateText(String text, String sourceLang, String targetLang) {
         try {
             String safeSource = normalizeLang(sourceLang);
-            String encoded = java.net.URLEncoder.encode(text, StandardCharsets.UTF_8);
-
-            String url = "https://api.mymemory.translated.net/get?q="
-                    + encoded + "&langpair=" + safeSource + "|" + targetLang;
+            
+            // Create JSON payload for LibreTranslate
+            String jsonPayload = String.format(
+                "{\"q\": \"%s\", \"source\": \"%s\", \"target\": \"%s\"}",
+                text.replace("\"", "\\\"").replace("\n", "\\n"),
+                safeSource,
+                targetLang
+            );
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .timeout(Duration.ofSeconds(10))
-                    .GET()
+                    .uri(URI.create("http://127.0.0.1:5000/translate"))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .build();
 
             HttpResponse<String> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            JsonNode root = objectMapper.readTree(response.body());
+            if (response.statusCode() != 200) {
+                throw new Exception("LibreTranslate API returned status: " + response.statusCode());
+            }
 
-            String translated = root.path("responseData").path("translatedText").asText();
+            JsonNode root = objectMapper.readTree(response.body());
+            String translated = root.path("translatedText").asText();
+            
             if (translated == null || translated.isBlank()) {
+                System.out.println("LibreTranslate returned empty translation for: " + text);
                 return text;
             }
 
@@ -146,7 +171,7 @@ public class VideoService {
         } catch (Exception e) {
             System.out.println("Translation failed for line: " + text);
             System.out.println("Reason: " + e.getMessage());
-            return text;
+            return text; // Fallback to original text
         }
     }
 
