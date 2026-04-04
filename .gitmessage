@@ -1,0 +1,21 @@
+# ===========================================
+# Commit Security Checklist
+# ===========================================
+# Before committing, ensure:
+# 
+# ✅ No API keys or secrets in files
+# ✅ Sensitive data moved to .env 
+# ✅ .env is in .gitignore
+# ✅ Only public configuration committed
+# ✅ No large model files included
+# 
+# ===========================================
+
+# Type: Brief description (50 chars max)
+#
+# Longer explanation if needed (wrap at 72 chars)
+# 
+# Security notes:
+# - 
+# 
+# Related issues: #123, #456

@@ -1,0 +1,295 @@
+# ===========================================
+# YouTube Video Translator - .gitignore
+# ===========================================
+
+# API Keys and Sensitive Information
+# ==================================
+*.env
+.env*
+!.env.example
+config/secrets.*
+config/keys.*
+secrets/
+keys/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Database and Logs
+# =================
+*.db
+*.sqlite
+*.sqlite3
+logs/
+*.log
+log/
+
+# OS Generated Files
+# ==================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# IDE and Editor Files  
+# ====================
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+.project
+.classpath
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Backend (Java/Spring Boot)
+# ==========================
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+# Maven
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties
+
+# Gradle
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Frontend (Node.js/React/Vite)
+# ==============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+*.local
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Package manager lock files (optional - you may want to include these)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Python
+# =======
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# LibreTranslate Models and Cache
+# ===============================
+# LibreTranslate downloads language models, these can be large
+.local/
+.cache/
+models/
+libretranslate-models/
+argos-translate-*
+*.model
+*.bin
+
+# Application Specific
+# ====================
+# Log files from our restart scripts
+/tmp/*.log
+*.pid
+
+# Local development overrides
+application-local.properties
+application-dev.properties
+config-local.json
+settings-local.json
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# System files
+*.pid
+*.seed
+*.pid.lock
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# ===========================================
+# Project Specific Ignores
+# ===========================================
+
+# Ignore any accidentally created API key files
+*api*key*
+*secret*
+*password*
+*token*
+*credential*
+
+# Ignore any configuration files with sensitive data
+config.production.json
+config.staging.json
+secrets.yml
+secrets.yaml
+
+# Ignore deployment scripts with credentials
+deploy-prod.*
+deploy-staging.*
+
+# ===========================================
+# KEEP THIS SECTION UPDATED
+# Add any new sensitive files here
+# ===========================================
