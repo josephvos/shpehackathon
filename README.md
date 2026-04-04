@@ -1,222 +1,395 @@
-# 🎥 YouTube Subtitle Translator
+# 🎥 YouTube Subtitle Translator with LibreTranslate
 
-A full-stack app that:
+A full-stack application that fetches real YouTube transcripts and translates them using LibreTranslate for high-quality, offline translations into 49+ languages.
 
-* Takes a YouTube link
-* Fetches captions automatically
-* Translates them into another language
-* Displays both original + translated subtitles
+## ✨ Features
+
+* 📹 **Real YouTube transcript fetching** - No more demo data
+* 🌍 **49+ languages supported** - Powered by LibreTranslate
+* 🚀 **Real-time progress bar** - See translation progress with ETA
+* ❌ **Cancel translation** - Stop long translations anytime  
+* 🏠 **Offline translation** - No API keys or internet dependency
+* 🎯 **Complete transcript** - Translates entire video, not just samples
+* 🇪🇸 **Latino languages prioritized** - Spanish, Portuguese, Catalan at the top
 
 ---
 
 # ⚙️ Tech Stack
 
-* **Frontend:** React (Vite)
-* **Backend:** Spring Boot (Java)
-* **Captions:** Python (`youtube-transcript-api`)
-* **Translation:** MyMemory API (no setup needed)
+* **Frontend:** React + Vite (Progress bars, 49 languages, real-time updates)
+* **Backend:** Spring Boot (Java) with enhanced progress tracking
+* **Transcripts:** Python `youtube-transcript-api` for real YouTube captions
+* **Translation:** **LibreTranslate** (offline, high-quality, 49+ languages)
 
 ---
 
-# 🚀 Setup on a New Laptop
+# 🚀 Complete Setup Instructions
 
-## 1. Clone the repo
+## Prerequisites
+
+Before starting, ensure you have:
+- **Node.js 18+** (for frontend)
+- **Java 17+** (for Spring Boot backend) 
+- **Python 3.8+** (for transcript fetching)
+- **Maven** (for Java build)
+
+---
+
+## 1️⃣ Clone and Setup Project
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-cd YOUR_REPO_NAME
+# Clone the repository
+git clone <your-repo-url>
+cd shpehackathon
+
+# Make scripts executable
+chmod +x restart_all.sh stop_all.sh status.sh demo.sh
 ```
 
 ---
 
-## 2. Install requirements
+## 2️⃣ Install System Dependencies
 
-### 🔹 Install Node.js
-
-Download: https://nodejs.org
-
-Check:
-
+### 🔹 Node.js & npm
 ```bash
-node -v
-npm -v
+# Check if installed
+node -v && npm -v
+
+# If not installed, download from: https://nodejs.org
 ```
 
----
-
-### 🔹 Install Java (JDK 17+ recommended)
-
-Check:
-
+### 🔹 Java (JDK 17+)
 ```bash
+# Check if installed
 java -version
+
+# If not installed:
+# macOS: brew install openjdk@17
+# Windows: Download from Oracle or OpenJDK
+# Linux: sudo apt install openjdk-17-jdk
 ```
 
----
-
-### 🔹 Install Maven
-
-Check:
-
+### 🔹 Maven
 ```bash
+# Check if installed
 mvn -v
+
+# If not installed:
+# macOS: brew install maven
+# Windows: Download from https://maven.apache.org
+# Linux: sudo apt install maven
 ```
 
----
-
-### 🔹 Install Python
-
-Download: https://www.python.org
-
-IMPORTANT:
-✔️ Check **"Add Python to PATH"**
-
-Check:
-
+### 🔹 Python 3.8+
 ```bash
+# Check if installed
 python --version
+# or
+python3 --version
+
+# If not installed, download from: https://python.org
+# ⚠️ IMPORTANT: Check "Add Python to PATH" during installation
 ```
 
 ---
 
-## 3. Install Python package
+## 3️⃣ Install Python Dependencies
 
 ```bash
-python -m pip install youtube-transcript-api
+# Install YouTube transcript API
+pip install youtube-transcript-api
+
+# Or if using python3 specifically:
+pip3 install youtube-transcript-api
 ```
 
 ---
 
-# ▶️ Running the App
+## 4️⃣ Install LibreTranslate
 
-You need **2 terminals** open.
+LibreTranslate is the core translation engine that runs locally.
+
+```bash
+# Install LibreTranslate
+pip install libretranslate
+
+# Or with python3:
+pip3 install libretranslate
+```
+
+**Note:** First startup will download language models (~2-4GB total), so ensure good internet connection.
 
 ---
 
-## 🖥 Terminal 1 — Backend (Spring Boot)
+## 5️⃣ Install Frontend Dependencies
 
 ```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install all npm dependencies
+npm install
+
+# Return to project root
+cd ..
+```
+
+---
+
+## 6️⃣ Easy Startup (Recommended)
+
+Use our automated startup script:
+
+```bash
+# Start all services (LibreTranslate + Spring Boot + Vite)
+./restart_all.sh
+```
+
+This script will:
+- 🔄 Kill any existing processes on ports 5000, 8080, 5173
+- 🚀 Start LibreTranslate server (http://127.0.0.1:5000)
+- 🚀 Start Spring Boot backend (http://localhost:8080) 
+- 🚀 Start Vite frontend (http://localhost:5173)
+- ✅ Verify all services are running
+- 🧪 Test LibreTranslate with sample German translation
+
+**Wait for:** `🎉 YouTube Video Translator is ready to use!`
+
+---
+
+## 7️⃣ Manual Startup (Alternative)
+
+If you prefer to start services manually:
+
+### Terminal 1 - LibreTranslate
+```bash
+# Start LibreTranslate server
+libretranslate --host 127.0.0.1 --port 5000
+
+# Wait for: "Loaded support for 49 languages"
+```
+
+### Terminal 2 - Backend 
+```bash
+# Start Spring Boot server
 cd backend
 mvn spring-boot:run
+
+# Wait for: "Started VideoTranslatorApplication"
 ```
 
-Runs on:
-
-```txt
-http://localhost:8080
-```
-
----
-
-## 💻 Terminal 2 — Frontend (React)
-
+### Terminal 3 - Frontend
 ```bash
+# Start Vite development server  
 cd frontend
-npm install
 npm run dev
-```
 
-Runs on:
-
-```txt
-http://localhost:5173
+# Wait for: "Local: http://localhost:5173"
 ```
 
 ---
 
-# 🌐 Open the app
+# 🌐 Using the Application
 
-Go to:
+## 1. Open Your Browser
+Navigate to: **http://localhost:5173**
 
-```txt
-http://localhost:5173
-```
+## 2. Enter YouTube URL
+Paste any YouTube video URL:
+- `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+- `https://youtu.be/dQw4w9WgXcQ`
+
+## 3. Select Target Language
+Choose from 49+ languages including:
+- 🇪🇸 **Spanish (Español)**
+- 🇧🇷 **Portuguese (Brazil)** 
+- 🇩🇪 **German (Deutsch)**
+- 🇫🇷 **French (Français)**
+- 🇷🇺 **Russian (Русский)**
+- 🇨🇳 **Chinese (中文)**
+- 🇯🇵 **Japanese (日本語)**
+- And 40+ more...
+
+## 4. Start Translation
+Click **"Get and translate subtitles"**
+
+## 5. Watch Progress
+- 📊 **Real-time progress bar** with percentage
+- 📝 **Progress stages:** "Fetching transcript..." → "Translating..." → "Complete!"
+- ⏱️ **Estimated time remaining**
+- ❌ **Cancel anytime** if needed
+
+## 6. View Results
+- 🎬 **Embedded YouTube video**
+- 📄 **Original captions** (left column)
+- 🌍 **Translated captions** (right column) 
+- ⏰ **Timestamps** for each caption line
 
 ---
 
-# ✅ How to use
-
-1. Paste a YouTube link
-2. Choose a language
-3. Click **"Get and translate subtitles"**
-4. View:
-
-   * 🎬 Video
-   * 📝 Original captions
-   * 🌍 Translated captions
-
----
-
-# 🧪 Test video
-
-Use this:
-
-```txt
-https://www.youtube.com/watch?v=dQw4w9WgXcQ
-```
-
----
-
-# ❗ Common Issues
-
-## 1. Backend 500 error
-
-* Make sure Python package is installed:
+# 🛠️ Management Commands
 
 ```bash
-python -m pip install youtube-transcript-api
+# Start all services
+./restart_all.sh
+
+# Stop all services  
+./stop_all.sh
+
+# Check service status
+./status.sh
+
+# Run demo with test URLs
+./demo.sh
 ```
 
 ---
 
-## 2. Stuck on "Getting captions..."
+# 🔧 Service URLs
 
-* Check backend terminal logs
-* Usually translation timeout or API delay
-
----
-
-## 3. Port already in use
-
-Change port in `vite.config.js` or Spring Boot config
+When running, these services will be available:
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:8080
+- **LibreTranslate:** http://127.0.0.1:5000
 
 ---
 
-## 4. Python not found
+# 🧪 Test Videos
 
-Reinstall Python and enable:
-
-```txt
-Add to PATH
-```
+Try these YouTube URLs for testing:
+- **Short video:** `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+- **Educational:** `https://www.youtube.com/watch?v=jNQXAC9IVRw`
 
 ---
 
-# 📁 Project Structure
+# ❗ Troubleshooting
 
+## LibreTranslate Issues
+
+**Problem:** LibreTranslate fails to start
+**Solution:**
 ```bash
-backend/
-  scripts/
-    get_transcript.py
-  src/main/java/...
+# Reinstall LibreTranslate
+pip uninstall libretranslate
+pip install libretranslate
 
-frontend/
-  src/components/Home.jsx
-  src/App.jsx
-  src/main.jsx
+# Or try with specific Python version
+python3 -m pip install libretranslate
 ```
 
+**Problem:** "Translation failed" errors
+**Solution:**
+```bash
+# Check if LibreTranslate is running
+curl http://127.0.0.1:5000/languages
+
+# If not responding, restart it
+pkill -f libretranslate
+libretranslate --host 127.0.0.1 --port 5000
+```
+
+## Backend Issues
+
+**Problem:** Spring Boot won't start (port 8080 busy)
+**Solution:**
+```bash
+# Kill process using port 8080
+lsof -ti :8080 | xargs kill -9
+
+# Or use our restart script
+./restart_all.sh
+```
+
+**Problem:** "Python script failed" errors
+**Solution:**
+```bash
+# Test Python script directly
+cd scripts
+python get_transcript.py dQw4w9WgXcQ
+
+# Reinstall transcript API
+pip install --upgrade youtube-transcript-api
+```
+
+## Frontend Issues  
+
+**Problem:** Vite server won't start (port 5173 busy)
+**Solution:**
+```bash
+# Kill Vite processes
+pkill -f vite
+
+# Or change port in vite.config.js:
+export default defineConfig({
+  server: { port: 5174 }  // Use different port
+})
+```
+
+## General Issues
+
+**Problem:** "No captions available"  
+**Solution:** Try a different YouTube video. Some videos don't have auto-generated captions.
+
+**Problem:** Long videos timeout
+**Solution:** The system handles up to 5 minutes timeout. For very long videos, consider using shorter clips.
+
 ---
 
-# 🔥 Future Improvements
+# 📊 Performance Notes
 
-* Sync subtitles with video playback
-* Export `.srt` files
-* Add audio translation (text-to-speech)
-* Whisper fallback when captions are missing
+- **LibreTranslate startup:** 30-60 seconds (first time downloads models)
+- **Translation speed:** ~2-5 lines per second depending on text length
+- **Memory usage:** ~2-4GB for LibreTranslate language models
+- **Supported video length:** Unlimited (timeout: 5 minutes for translation)
 
 ---
 
-# 👨‍💻 Author
+# 🔥 Recent Improvements
 
-Built for hackathon / learning project 🚀
+- ✅ **LibreTranslate integration** (replaced MyMemory API)
+- ✅ **Real-time progress tracking** with cancel functionality
+- ✅ **Complete transcript translation** (removed 15-line limit)
+- ✅ **49+ language support** with native names and flags
+- ✅ **Automated startup/shutdown** scripts
+- ✅ **Enhanced error handling** and user feedback
+- ✅ **Responsive progress UI** with smooth animations
+
+---
+
+# 🚧 Future Enhancements
+
+- 🔄 **WebSocket progress** for real-time backend progress updates
+- 📁 **Export functionality** (.srt, .vtt file downloads)
+- 🎵 **Audio translation** (text-to-speech integration)
+- 🤖 **Whisper integration** for videos without captions
+- 🎬 **Video player sync** with translated captions
+- 🌙 **Batch processing** for multiple videos
+
+---
+
+# 👥 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)  
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+# 🙏 Acknowledgments
+
+- **LibreTranslate** - Open source translation engine
+- **youtube-transcript-api** - YouTube caption extraction
+- **Spring Boot** - Backend framework
+- **React + Vite** - Frontend framework
+
+---
+
+**Built with ❤️ for seamless YouTube video translation**
