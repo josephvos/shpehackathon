@@ -95,6 +95,9 @@ function normalizeSubtitleLines(lines) {
 }
 
 export default function Home() {
+  const DONE_SOUND_URL =
+    'https://res.cloudinary.com/dvucimldu/video/upload/v1775361361/Ding_-_Sound_Effect_f8pnje.mp3'
+
   const [url, setUrl] = useState('')
   const [lang, setLang] = useState('es')
   const [status, setStatus] = useState('')
@@ -105,11 +108,14 @@ export default function Home() {
   const [progressText, setProgressText] = useState('')
   const [activeSubtitleIndex, setActiveSubtitleIndex] = useState(-1)
   const [dubEnabled, setDubEnabled] = useState(true)
+  const [dubSessionActive, setDubSessionActive] = useState(false)
 
+  const doneSoundRef = useRef(null)
   const playerRef = useRef(null)
   const playerContainerRef = useRef(null)
   const playerReadyRef = useRef(false)
   const syncIntervalRef = useRef(null)
+
   const currentSubtitleIndexRef = useRef(-1)
   const lastSpokenIndexRef = useRef(-1)
   const lastVideoTimeRef = useRef(0)
@@ -117,6 +123,11 @@ export default function Home() {
   const speakRetryTimeoutRef = useRef(null)
   const currentUtteranceRef = useRef(null)
   const pendingSeekRef = useRef(false)
+  const dubSessionActiveRef = useRef(false)
+  const dubEnabledRef = useRef(true)
+  const translatedSubtitlesRef = useRef([])
+  const langRef = useRef('es')
+  const speechUnlockedRef = useRef(false)
 
   const videoId = useMemo(() => getYouTubeId(url), [url])
 
@@ -129,6 +140,24 @@ export default function Home() {
     () => normalizeSubtitleLines(subtitles),
     [subtitles]
   )
+
+  const isTranslationReady = !isLoading && sortedTranslatedSubtitles.length > 0
+
+  useEffect(() => {
+    translatedSubtitlesRef.current = sortedTranslatedSubtitles
+  }, [sortedTranslatedSubtitles])
+
+  useEffect(() => {
+    dubEnabledRef.current = dubEnabled
+  }, [dubEnabled])
+
+  useEffect(() => {
+    langRef.current = lang
+  }, [lang])
+
+  useEffect(() => {
+    dubSessionActiveRef.current = dubSessionActive
+  }, [dubSessionActive])
 
   const clearSpeakRetry = () => {
     if (speakRetryTimeoutRef.current) {
@@ -151,6 +180,22 @@ export default function Home() {
     currentUtteranceRef.current = null
   }
 
+  const playDoneSound = () => {
+    try {
+      if (!doneSoundRef.current) {
+        doneSoundRef.current = new Audio(DONE_SOUND_URL)
+        doneSoundRef.current.preload = 'auto'
+      }
+
+      doneSoundRef.current.currentTime = 0
+      doneSoundRef.current.play().catch((e) => {
+        console.log('sound play blocked', e)
+      })
+    } catch (e) {
+      console.log('sound error', e)
+    }
+  }
+
   const ensureVoicesReady = () => {
     if (!('speechSynthesis' in window)) return
 
@@ -168,6 +213,27 @@ export default function Home() {
     }
   }
 
+  const unlockSpeech = () => {
+    if (!('speechSynthesis' in window)) return
+    if (speechUnlockedRef.current) return
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(' ')
+      utterance.volume = 0
+      utterance.rate = 1
+      utterance.onend = () => {
+        speechUnlockedRef.current = true
+      }
+      utterance.onerror = () => {
+        speechUnlockedRef.current = true
+      }
+      window.speechSynthesis.speak(utterance)
+      speechUnlockedRef.current = true
+    } catch (e) {
+      console.log('speech unlock failed', e)
+    }
+  }
+
   const pickBestVoice = (speechLang) => {
     const voices = window.speechSynthesis.getVoices()
     const target = speechLang.toLowerCase()
@@ -182,8 +248,27 @@ export default function Home() {
     )
   }
 
+  const applyDubAudioMode = () => {
+    const player = playerRef.current
+    if (!player || !playerReadyRef.current) return
+
+    if (dubEnabledRef.current && dubSessionActiveRef.current) {
+      player.mute()
+    } else {
+      player.unMute()
+      player.setVolume(100)
+    }
+  }
+
   const speakLine = (lineText) => {
-    if (!dubEnabled || !lineText || !('speechSynthesis' in window)) return
+    if (
+      !dubEnabledRef.current ||
+      !dubSessionActiveRef.current ||
+      !lineText ||
+      !('speechSynthesis' in window)
+    ) {
+      return
+    }
 
     ensureVoicesReady()
 
@@ -203,7 +288,7 @@ export default function Home() {
     }
 
     const utterance = new SpeechSynthesisUtterance(lineText)
-    utterance.lang = getSpeechLang(lang)
+    utterance.lang = getSpeechLang(langRef.current)
     utterance.rate = 1
     utterance.pitch = 1
     utterance.volume = 1
@@ -229,10 +314,11 @@ export default function Home() {
   }
 
   const findLastStartedSubtitleIndex = (timeSeconds) => {
+    const lines = translatedSubtitlesRef.current
     let result = -1
 
-    for (let i = 0; i < sortedTranslatedSubtitles.length; i++) {
-      if (timeSeconds + 0.05 >= sortedTranslatedSubtitles[i].start) {
+    for (let i = 0; i < lines.length; i++) {
+      if (timeSeconds + 0.05 >= lines[i].start) {
         result = i
       } else {
         break
@@ -244,7 +330,9 @@ export default function Home() {
 
   const syncDubToVideo = () => {
     const player = playerRef.current
-    if (!player || !playerReadyRef.current || !window.YT || sortedTranslatedSubtitles.length === 0) return
+    const lines = translatedSubtitlesRef.current
+
+    if (!player || !playerReadyRef.current || !window.YT || lines.length === 0) return
 
     const state = player.getPlayerState?.()
     if (state !== window.YT.PlayerState.PLAYING) return
@@ -261,9 +349,13 @@ export default function Home() {
       pendingSeekRef.current = false
       stopSpeech()
 
-      if (activeIndex >= 0) {
-        speakLine(sortedTranslatedSubtitles[activeIndex].text)
-        lastSpokenIndexRef.current = activeIndex
+      if (dubEnabledRef.current && dubSessionActiveRef.current) {
+        if (activeIndex >= 0) {
+          speakLine(lines[activeIndex].text)
+          lastSpokenIndexRef.current = activeIndex
+        } else {
+          lastSpokenIndexRef.current = -1
+        }
       } else {
         lastSpokenIndexRef.current = -1
       }
@@ -272,8 +364,13 @@ export default function Home() {
       return
     }
 
-    if (activeIndex >= 0 && activeIndex !== lastSpokenIndexRef.current) {
-      speakLine(sortedTranslatedSubtitles[activeIndex].text)
+    if (
+      dubEnabledRef.current &&
+      dubSessionActiveRef.current &&
+      activeIndex >= 0 &&
+      activeIndex !== lastSpokenIndexRef.current
+    ) {
+      speakLine(lines[activeIndex].text)
       lastSpokenIndexRef.current = activeIndex
     }
 
@@ -305,6 +402,50 @@ export default function Home() {
 
     playerRef.current = null
     playerReadyRef.current = false
+  }
+
+  const startDubbedPlayback = (startTime = null) => {
+    const player = playerRef.current
+    if (!player || !playerReadyRef.current) return
+    if (!translatedSubtitlesRef.current.length) return
+
+    unlockSpeech()
+    setDubSessionActive(true)
+    dubSessionActiveRef.current = true
+    pendingSeekRef.current = true
+    stopSpeech()
+
+    applyDubAudioMode()
+
+    if (typeof startTime === 'number') {
+      player.seekTo(startTime, true)
+      lastVideoTimeRef.current = startTime
+    } else {
+      lastVideoTimeRef.current = player.getCurrentTime?.() || 0
+    }
+
+    player.playVideo()
+
+    const now =
+      typeof startTime === 'number'
+        ? startTime
+        : player.getCurrentTime?.() || 0
+
+    const idx = findLastStartedSubtitleIndex(now)
+    currentSubtitleIndexRef.current = idx
+    lastSpokenIndexRef.current = -1
+    setActiveSubtitleIndex(idx)
+
+    setTimeout(() => {
+      syncDubToVideo()
+    }, 180)
+  }
+
+  const stopDubbedPlayback = () => {
+    setDubSessionActive(false)
+    dubSessionActiveRef.current = false
+    stopSpeech()
+    applyDubAudioMode()
   }
 
   useEffect(() => {
@@ -358,6 +499,8 @@ export default function Home() {
             const state = event.data
 
             if (state === window.YT.PlayerState.PLAYING) {
+              applyDubAudioMode()
+
               try {
                 window.speechSynthesis.resume()
               } catch (e) {
@@ -371,9 +514,11 @@ export default function Home() {
               currentSubtitleIndexRef.current = idx
               setActiveSubtitleIndex(idx)
 
-              if (idx >= 0 && idx !== lastSpokenIndexRef.current) {
-                speakLine(sortedTranslatedSubtitles[idx]?.text || '')
-                lastSpokenIndexRef.current = idx
+              if (dubEnabledRef.current && dubSessionActiveRef.current) {
+                if (idx >= 0 && idx !== lastSpokenIndexRef.current) {
+                  speakLine(translatedSubtitlesRef.current[idx]?.text || '')
+                  lastSpokenIndexRef.current = idx
+                }
               }
             }
 
@@ -383,6 +528,7 @@ export default function Home() {
 
             if (state === window.YT.PlayerState.BUFFERING) {
               stopSpeech()
+              lastSpokenIndexRef.current = -1
             }
 
             if (state === window.YT.PlayerState.ENDED) {
@@ -390,6 +536,9 @@ export default function Home() {
               currentSubtitleIndexRef.current = -1
               lastSpokenIndexRef.current = -1
               setActiveSubtitleIndex(-1)
+              setDubSessionActive(false)
+              dubSessionActiveRef.current = false
+              applyDubAudioMode()
             }
           }
         }
@@ -403,7 +552,7 @@ export default function Home() {
     }
 
     return () => {}
-  }, [videoId, sortedTranslatedSubtitles])
+  }, [videoId])
 
   useEffect(() => {
     return () => {
@@ -416,13 +565,24 @@ export default function Home() {
     currentSubtitleIndexRef.current = -1
     lastSpokenIndexRef.current = -1
     setActiveSubtitleIndex(-1)
-  }, [lang, dubEnabled, sortedTranslatedSubtitles.length])
+    setDubSessionActive(false)
+    dubSessionActiveRef.current = false
+    applyDubAudioMode()
+  }, [lang])
+
+  useEffect(() => {
+    if (!dubEnabled) {
+      stopDubbedPlayback()
+    } else {
+      applyDubAudioMode()
+    }
+  }, [dubEnabled])
 
   const cancelTranslation = () => {
     setIsLoading(false)
     setProgress(0)
     setProgressText('')
-    setStatus('❌ Translation cancelled')
+    setStatus('Translation cancelled')
   }
 
   const handleTranslate = async () => {
@@ -434,13 +594,16 @@ export default function Home() {
     setIsLoading(true)
     setProgress(0)
     setProgressText('Starting translation job...')
-    setStatus('🔄 Starting backend translation...')
+    setStatus('Starting backend translation...')
     setSubtitles([])
     setOriginalSubtitles([])
     stopSpeech()
     lastSpokenIndexRef.current = -1
     currentSubtitleIndexRef.current = -1
     setActiveSubtitleIndex(-1)
+    setDubSessionActive(false)
+    dubSessionActiveRef.current = false
+    applyDubAudioMode()
 
     let pollInterval = null
 
@@ -452,7 +615,7 @@ export default function Home() {
 
       const jobId = startRes.data.jobId
 
-      setStatus('🔄 Translation started')
+      setStatus('Translation started')
       setProgress(2)
       setProgressText('Job created, waiting for backend progress...')
 
@@ -469,7 +632,7 @@ export default function Home() {
 
             if (data.error) {
               setIsLoading(false)
-              setStatus(`❌ ${data.errorMessage || 'Translation failed'}`)
+              setStatus(data.errorMessage || 'Translation failed')
               setProgress(0)
               setProgressText('')
               return
@@ -478,8 +641,9 @@ export default function Home() {
             setOriginalSubtitles(normalizeSubtitleLines(data.result?.originalSubtitles || []))
             setSubtitles(normalizeSubtitleLines(data.result?.translatedSubtitles || []))
             setStatus(
-              `✅ Translation complete! Translated ${data.result?.translatedSubtitles?.length || 0} lines.`
+              `Translation complete! Translated ${data.result?.translatedSubtitles?.length || 0} lines.`
             )
+            playDoneSound()
 
             setTimeout(() => {
               setIsLoading(false)
@@ -492,7 +656,7 @@ export default function Home() {
           setIsLoading(false)
           setProgress(0)
           setProgressText('')
-          setStatus(`❌ Failed while checking progress: ${pollErr.message}`)
+          setStatus(`Failed while checking progress: ${pollErr.message}`)
         }
       }, 1000)
     } catch (err) {
@@ -500,7 +664,7 @@ export default function Home() {
       setIsLoading(false)
       setProgress(0)
       setProgressText('')
-      setStatus(`❌ ${err.message || 'Something went wrong'}`)
+      setStatus(err.message || 'Something went wrong')
     }
   }
 
@@ -508,9 +672,15 @@ export default function Home() {
     const player = playerRef.current
     if (!player || !playerReadyRef.current) return
 
+    if (dubEnabledRef.current) {
+      startDubbedPlayback(Number(startTime || 0))
+      return
+    }
+
     pendingSeekRef.current = true
     stopSpeech()
-
+    player.unMute()
+    player.setVolume(100)
     player.seekTo(startTime, true)
     player.playVideo()
 
@@ -530,8 +700,12 @@ export default function Home() {
   return (
     <div className="page">
       <div className="hero">
+        <div className="heroBadge">TTS dub preview</div>
         <h1>YouTube Subtitle Translator + Dub Preview</h1>
-        <p>Paste a YouTube link, translate the captions, then preview spoken dubbing synced to subtitle timing.</p>
+        <p>
+          Translate captions, jump to any timestamp, and play a muted video with synced
+          speech synthesis on top.
+        </p>
       </div>
 
       <div className="card">
@@ -602,24 +776,41 @@ export default function Home() {
         <label className="toggleRow">
           <input
             type="checkbox"
+            className="toggleInput"
             checked={dubEnabled}
-            onChange={(e) => {
-              setDubEnabled(e.target.checked)
-              if (!e.target.checked) stopSpeech()
-            }}
+            onChange={(e) => setDubEnabled(e.target.checked)}
           />
+          <span className="customCheck" />
           <span>Enable spoken dub preview</span>
         </label>
 
-        <button onClick={handleTranslate} disabled={isLoading}>
-          {isLoading ? '⏳ Translating...' : 'Get and translate subtitles'}
-        </button>
-
-        {isLoading && (
-          <button onClick={cancelTranslation} className="cancelButton">
-            ❌ Cancel Translation
+        <div className="buttonGroup">
+          <button onClick={handleTranslate} disabled={isLoading}>
+            {isLoading ? 'Translating...' : 'Get and translate subtitles'}
           </button>
-        )}
+
+          {isTranslationReady && (
+            <button
+              type="button"
+              className={`playButton ${dubSessionActive ? 'playButtonActive' : ''}`}
+              onClick={() => {
+                if (dubSessionActive) {
+                  stopDubbedPlayback()
+                } else {
+                  startDubbedPlayback()
+                }
+              }}
+            >
+              {dubSessionActive ? 'Stop Dubbed Video' : 'Play Dubbed Video'}
+            </button>
+          )}
+
+          {isLoading && (
+            <button onClick={cancelTranslation} className="cancelButton">
+              Cancel Translation
+            </button>
+          )}
+        </div>
 
         {isLoading && (
           <div className="progressContainer">
@@ -633,11 +824,33 @@ export default function Home() {
           </div>
         )}
 
-        <p className="status">{status}</p>
+        <p className="status">
+          {isLoading ? (
+            <span className="statusLoading">
+              <span className="spinner" />
+              {status || 'Translation started'}
+            </span>
+          ) : (
+            status
+          )}
+        </p>
       </div>
 
       {videoId && (
         <div className="videoCard">
+          <div className="videoHeader">
+            <div>
+              <h2>Video preview</h2>
+              <p>
+                {dubSessionActive && dubEnabled
+                  ? 'English audio muted. TTS dub is active.'
+                  : 'Original video audio is active.'}
+              </p>
+            </div>
+            <div className={`modePill ${dubSessionActive && dubEnabled ? 'modePillActive' : ''}`}>
+              {dubSessionActive && dubEnabled ? 'Dub mode ON' : 'Dub mode OFF'}
+            </div>
+          </div>
           <div ref={playerContainerRef} />
         </div>
       )}
