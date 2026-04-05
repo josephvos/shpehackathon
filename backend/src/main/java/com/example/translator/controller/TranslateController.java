@@ -1,7 +1,8 @@
 package com.example.translator.controller;
 
+import com.example.translator.dto.StartTranslationResponse;
 import com.example.translator.dto.SubtitleTranslateRequest;
-import com.example.translator.dto.SubtitleTranslateResponse;
+import com.example.translator.dto.TranslationProgress;
 import com.example.translator.service.VideoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,13 +18,22 @@ public class TranslateController {
         this.videoService = videoService;
     }
 
-    @PostMapping("/subtitles/translate")
-    public ResponseEntity<SubtitleTranslateResponse> translateSubtitles(
+    @PostMapping("/subtitles/translate/start")
+    public ResponseEntity<StartTranslationResponse> startTranslation(
             @RequestBody SubtitleTranslateRequest request
     ) {
-        SubtitleTranslateResponse response =
-                videoService.getAndTranslateSubtitles(request.getVideoUrl(), request.getTargetLang());
+        String jobId = videoService.startTranslationJob(request);
+        return ResponseEntity.ok(new StartTranslationResponse(jobId, "Translation started"));
+    }
 
-        return ResponseEntity.ok(response);
+    @GetMapping("/subtitles/translate/progress/{jobId}")
+    public ResponseEntity<TranslationProgress> getTranslationProgress(@PathVariable String jobId) {
+        TranslationProgress progress = videoService.getProgress(jobId);
+
+        if (progress == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(progress);
     }
 }

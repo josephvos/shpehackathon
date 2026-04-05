@@ -1,0 +1,9 @@
+com\example\translator\service\VideoService$TranscriptResult.class
+com\example\translator\dto\StartTranslationResponse.class
+com\example\translator\dto\SubtitleTranslateRequest.class
+com\example\translator\service\VideoService.class
+com\example\translator\controller\TranslateController.class
+com\example\translator\dto\SubtitleLine.class
+com\example\translator\dto\TranslationProgress.class
+com\example\translator\dto\SubtitleTranslateResponse.class
+com\example\translator\VideoTranslatorApplication.class
