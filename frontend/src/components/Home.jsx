@@ -5,16 +5,20 @@ import '../index.css'
 function getYouTubeId(url) {
   try {
     if (!url) return ''
+
     if (url.includes('youtu.be/')) {
       return url.split('youtu.be/')[1].split('?')[0]
     }
+
     const parsed = new URL(url)
+
     if (parsed.hostname.includes('youtube.com')) {
       if (parsed.pathname.startsWith('/embed/')) {
         return parsed.pathname.split('/embed/')[1]?.split('?')[0] || ''
       }
       return parsed.searchParams.get('v') || ''
     }
+
     return ''
   } catch {
     return ''
@@ -30,6 +34,9 @@ function getSpeechLang(appLang) {
     it: 'it-IT',
     pt: 'pt-PT',
     'pt-BR': 'pt-BR',
+    ca: 'ca-ES',
+    gl: 'gl-ES',
+    eu: 'eu-ES',
     ja: 'ja-JP',
     ko: 'ko-KR',
     zh: 'zh-CN',
@@ -37,9 +44,54 @@ function getSpeechLang(appLang) {
     'zh-Hant': 'zh-TW',
     ru: 'ru-RU',
     ar: 'ar-SA',
-    hi: 'hi-IN'
+    hi: 'hi-IN',
+    nl: 'nl-NL',
+    sv: 'sv-SE',
+    da: 'da-DK',
+    nb: 'nb-NO',
+    fi: 'fi-FI',
+    pl: 'pl-PL',
+    cs: 'cs-CZ',
+    sk: 'sk-SK',
+    sl: 'sl-SI',
+    hu: 'hu-HU',
+    ro: 'ro-RO',
+    bg: 'bg-BG',
+    uk: 'uk-UA',
+    el: 'el-GR',
+    ga: 'ga-IE',
+    et: 'et-EE',
+    lv: 'lv-LV',
+    lt: 'lt-LT',
+    th: 'th-TH',
+    vi: 'vi-VN',
+    id: 'id-ID',
+    ms: 'ms-MY',
+    tl: 'fil-PH',
+    bn: 'bn-BD',
+    ur: 'ur-PK',
+    fa: 'fa-IR',
+    he: 'he-IL',
+    tr: 'tr-TR',
+    az: 'az-AZ',
+    ky: 'ky-KG',
+    eo: 'eo',
+    sq: 'sq-AL'
   }
-  return map[appLang] || 'es-ES'
+
+  return map[appLang] || 'en-US'
+}
+
+function normalizeSubtitleLines(lines) {
+  return [...(lines || [])]
+    .filter((line) => line && typeof line.text === 'string')
+    .map((line) => ({
+      text: line.text.trim(),
+      start: Number(line.start || 0),
+      duration: Math.max(Number(line.duration || 0), 0.05)
+    }))
+    .filter((line) => line.text.length > 0)
+    .sort((a, b) => a.start - b.start)
 }
 
 export default function Home() {
@@ -51,7 +103,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressText, setProgressText] = useState('')
-  const [cancelTokenSource, setCancelTokenSource] = useState(null)
   const [activeSubtitleIndex, setActiveSubtitleIndex] = useState(-1)
   const [dubEnabled, setDubEnabled] = useState(true)
 
@@ -60,56 +111,140 @@ export default function Home() {
   const playerReadyRef = useRef(false)
   const syncIntervalRef = useRef(null)
   const currentSubtitleIndexRef = useRef(-1)
+  const lastSpokenIndexRef = useRef(-1)
   const lastVideoTimeRef = useRef(0)
-  const isSeekingRef = useRef(false)
   const voicesReadyRef = useRef(false)
-  const isSpeakingRef = useRef(false)
+  const speakRetryTimeoutRef = useRef(null)
   const currentUtteranceRef = useRef(null)
-  const lastSpokenTextRef = useRef('')
+  const pendingSeekRef = useRef(false)
 
   const videoId = useMemo(() => getYouTubeId(url), [url])
 
-  const stopSpeech = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
+  const sortedOriginalSubtitles = useMemo(
+    () => normalizeSubtitleLines(originalSubtitles),
+    [originalSubtitles]
+  )
+
+  const sortedTranslatedSubtitles = useMemo(
+    () => normalizeSubtitleLines(subtitles),
+    [subtitles]
+  )
+
+  const clearSpeakRetry = () => {
+    if (speakRetryTimeoutRef.current) {
+      clearTimeout(speakRetryTimeoutRef.current)
+      speakRetryTimeoutRef.current = null
     }
   }
 
-  const speakText = (text) => {
-    if (!dubEnabled || !text || !('speechSynthesis' in window)) return
+  const stopSpeech = () => {
+    clearSpeakRetry()
 
-    stopSpeech()
+    if (!('speechSynthesis' in window)) return
 
-    const utterance = new SpeechSynthesisUtterance(text)
+    try {
+      window.speechSynthesis.cancel()
+    } catch (e) {
+      console.log('speech cancel failed', e)
+    }
+
+    currentUtteranceRef.current = null
+  }
+
+  const ensureVoicesReady = () => {
+    if (!('speechSynthesis' in window)) return
+
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      voicesReadyRef.current = true
+      return
+    }
+
+    window.speechSynthesis.onvoiceschanged = () => {
+      const updatedVoices = window.speechSynthesis.getVoices()
+      if (updatedVoices.length > 0) {
+        voicesReadyRef.current = true
+      }
+    }
+  }
+
+  const pickBestVoice = (speechLang) => {
+    const voices = window.speechSynthesis.getVoices()
+    const target = speechLang.toLowerCase()
+    const base = speechLang.slice(0, 2).toLowerCase()
+
+    return (
+      voices.find((v) => v.lang?.toLowerCase() === target) ||
+      voices.find((v) => v.lang?.toLowerCase().startsWith(base + '-')) ||
+      voices.find((v) => v.lang?.toLowerCase().startsWith(base)) ||
+      voices.find((v) => v.lang?.toLowerCase().startsWith('en')) ||
+      null
+    )
+  }
+
+  const speakLine = (lineText) => {
+    if (!dubEnabled || !lineText || !('speechSynthesis' in window)) return
+
+    ensureVoicesReady()
+
+    if (!voicesReadyRef.current) {
+      clearSpeakRetry()
+      speakRetryTimeoutRef.current = setTimeout(() => {
+        speakLine(lineText)
+      }, 250)
+      return
+    }
+
+    try {
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.resume()
+    } catch (e) {
+      console.log('speech reset failed', e)
+    }
+
+    const utterance = new SpeechSynthesisUtterance(lineText)
     utterance.lang = getSpeechLang(lang)
-    utterance.rate = 1.05
+    utterance.rate = 1
     utterance.pitch = 1
     utterance.volume = 1
 
-    const voices = window.speechSynthesis.getVoices()
-    const matchingVoice =
-      voices.find((v) => v.lang?.toLowerCase() === utterance.lang.toLowerCase()) ||
-      voices.find((v) => v.lang?.toLowerCase().startsWith(lang.toLowerCase())) ||
-      voices.find((v) => v.lang?.toLowerCase().startsWith('es'))
+    const voice = pickBestVoice(utterance.lang)
+    if (voice) utterance.voice = voice
 
-    if (matchingVoice) {
-      utterance.voice = matchingVoice
+    utterance.onend = () => {
+      if (currentUtteranceRef.current === utterance) {
+        currentUtteranceRef.current = null
+      }
     }
 
+    utterance.onerror = (e) => {
+      if (currentUtteranceRef.current === utterance) {
+        currentUtteranceRef.current = null
+      }
+      console.log('TTS error:', e)
+    }
+
+    currentUtteranceRef.current = utterance
     window.speechSynthesis.speak(utterance)
   }
 
-  const findSubtitleIndexAtTime = (timeSeconds) => {
-    return subtitles.findIndex((line) => {
-      const start = Number(line.start || 0)
-      const end = start + Number(line.duration || 0)
-      return timeSeconds >= start && timeSeconds < end
-    })
+  const findLastStartedSubtitleIndex = (timeSeconds) => {
+    let result = -1
+
+    for (let i = 0; i < sortedTranslatedSubtitles.length; i++) {
+      if (timeSeconds + 0.05 >= sortedTranslatedSubtitles[i].start) {
+        result = i
+      } else {
+        break
+      }
+    }
+
+    return result
   }
 
   const syncDubToVideo = () => {
     const player = playerRef.current
-    if (!player || !playerReadyRef.current || !window.YT) return
+    if (!player || !playerReadyRef.current || !window.YT || sortedTranslatedSubtitles.length === 0) return
 
     const state = player.getPlayerState?.()
     if (state !== window.YT.PlayerState.PLAYING) return
@@ -118,28 +253,31 @@ export default function Home() {
     const lastTime = lastVideoTimeRef.current
     const jumped = Math.abs(currentTime - lastTime) > 1.2
 
-    if (jumped) {
-      isSeekingRef.current = true
+    const activeIndex = findLastStartedSubtitleIndex(currentTime)
+    currentSubtitleIndexRef.current = activeIndex
+    setActiveSubtitleIndex(activeIndex)
+
+    if (jumped || pendingSeekRef.current) {
+      pendingSeekRef.current = false
       stopSpeech()
-      currentSubtitleIndexRef.current = -1
-      setActiveSubtitleIndex(-1)
+
+      if (activeIndex >= 0) {
+        speakLine(sortedTranslatedSubtitles[activeIndex].text)
+        lastSpokenIndexRef.current = activeIndex
+      } else {
+        lastSpokenIndexRef.current = -1
+      }
+
+      lastVideoTimeRef.current = currentTime
+      return
     }
 
-    const subtitleIndex = findSubtitleIndexAtTime(currentTime)
-
-    if (subtitleIndex !== currentSubtitleIndexRef.current) {
-      currentSubtitleIndexRef.current = subtitleIndex
-      setActiveSubtitleIndex(subtitleIndex)
-      stopSpeech()
-
-      if (subtitleIndex >= 0) {
-        const line = subtitles[subtitleIndex]
-        speakText(line.text)
-      }
+    if (activeIndex >= 0 && activeIndex !== lastSpokenIndexRef.current) {
+      speakLine(sortedTranslatedSubtitles[activeIndex].text)
+      lastSpokenIndexRef.current = activeIndex
     }
 
     lastVideoTimeRef.current = currentTime
-    isSeekingRef.current = false
   }
 
   const startSyncLoop = () => {
@@ -147,9 +285,7 @@ export default function Home() {
       clearInterval(syncIntervalRef.current)
     }
 
-    syncIntervalRef.current = setInterval(() => {
-      syncDubToVideo()
-    }, 150)
+    syncIntervalRef.current = setInterval(syncDubToVideo, 100)
   }
 
   const destroyPlayer = () => {
@@ -160,6 +296,7 @@ export default function Home() {
 
     stopSpeech()
     currentSubtitleIndexRef.current = -1
+    lastSpokenIndexRef.current = -1
     setActiveSubtitleIndex(-1)
 
     if (playerRef.current?.destroy) {
@@ -169,6 +306,10 @@ export default function Home() {
     playerRef.current = null
     playerReadyRef.current = false
   }
+
+  useEffect(() => {
+    ensureVoicesReady()
+  }, [])
 
   useEffect(() => {
     const loadYouTubeAPI = () => {
@@ -209,26 +350,45 @@ export default function Home() {
         events: {
           onReady: (event) => {
             playerReadyRef.current = true
-            event.target.mute()
+            event.target.unMute()
+            event.target.setVolume(100)
             startSyncLoop()
           },
           onStateChange: (event) => {
             const state = event.data
 
             if (state === window.YT.PlayerState.PLAYING) {
-              syncDubToVideo()
+              try {
+                window.speechSynthesis.resume()
+              } catch (e) {
+                console.log('speech resume failed', e)
+              }
+
+              const now = playerRef.current?.getCurrentTime?.() || 0
+              lastVideoTimeRef.current = now
+
+              const idx = findLastStartedSubtitleIndex(now)
+              currentSubtitleIndexRef.current = idx
+              setActiveSubtitleIndex(idx)
+
+              if (idx >= 0 && idx !== lastSpokenIndexRef.current) {
+                speakLine(sortedTranslatedSubtitles[idx]?.text || '')
+                lastSpokenIndexRef.current = idx
+              }
             }
 
-            if (
-              state === window.YT.PlayerState.PAUSED ||
-              state === window.YT.PlayerState.BUFFERING ||
-              state === window.YT.PlayerState.ENDED
-            ) {
+            if (state === window.YT.PlayerState.PAUSED) {
+              stopSpeech()
+            }
+
+            if (state === window.YT.PlayerState.BUFFERING) {
               stopSpeech()
             }
 
             if (state === window.YT.PlayerState.ENDED) {
+              stopSpeech()
               currentSubtitleIndexRef.current = -1
+              lastSpokenIndexRef.current = -1
               setActiveSubtitleIndex(-1)
             }
           }
@@ -242,10 +402,8 @@ export default function Home() {
       destroyPlayer()
     }
 
-    return () => {
-      // keep player during rerenders, only hard cleanup on unmount handled below
-    }
-  }, [videoId])
+    return () => {}
+  }, [videoId, sortedTranslatedSubtitles])
 
   useEffect(() => {
     return () => {
@@ -256,18 +414,15 @@ export default function Home() {
   useEffect(() => {
     stopSpeech()
     currentSubtitleIndexRef.current = -1
+    lastSpokenIndexRef.current = -1
     setActiveSubtitleIndex(-1)
-  }, [lang, dubEnabled, subtitles])
+  }, [lang, dubEnabled, sortedTranslatedSubtitles.length])
 
   const cancelTranslation = () => {
-    if (cancelTokenSource) {
-      cancelTokenSource.cancel('Translation cancelled by user')
-    }
     setIsLoading(false)
     setProgress(0)
     setProgressText('')
     setStatus('❌ Translation cancelled')
-    setCancelTokenSource(null)
   }
 
   const handleTranslate = async () => {
@@ -282,6 +437,10 @@ export default function Home() {
     setStatus('🔄 Starting backend translation...')
     setSubtitles([])
     setOriginalSubtitles([])
+    stopSpeech()
+    lastSpokenIndexRef.current = -1
+    currentSubtitleIndexRef.current = -1
+    setActiveSubtitleIndex(-1)
 
     let pollInterval = null
 
@@ -316,8 +475,8 @@ export default function Home() {
               return
             }
 
-            setOriginalSubtitles(data.result?.originalSubtitles || [])
-            setSubtitles(data.result?.translatedSubtitles || [])
+            setOriginalSubtitles(normalizeSubtitleLines(data.result?.originalSubtitles || []))
+            setSubtitles(normalizeSubtitleLines(data.result?.translatedSubtitles || []))
             setStatus(
               `✅ Translation complete! Translated ${data.result?.translatedSubtitles?.length || 0} lines.`
             )
@@ -326,7 +485,7 @@ export default function Home() {
               setIsLoading(false)
               setProgress(0)
               setProgressText('')
-            }, 1000)
+            }, 800)
           }
         } catch (pollErr) {
           clearInterval(pollInterval)
@@ -349,28 +508,24 @@ export default function Home() {
     const player = playerRef.current
     if (!player || !playerReadyRef.current) return
 
+    pendingSeekRef.current = true
     stopSpeech()
+
     player.seekTo(startTime, true)
     player.playVideo()
+
+    const idx = findLastStartedSubtitleIndex(startTime)
+    currentSubtitleIndexRef.current = idx
+    lastSpokenIndexRef.current = -1
+    setActiveSubtitleIndex(idx)
+
+    setTimeout(() => {
+      lastVideoTimeRef.current = startTime
+      syncDubToVideo()
+    }, 200)
   }
 
-  const speakCurrentSubtitle = () => {
-    const player = playerRef.current
-    if (!player || !playerReadyRef.current) return
-
-    const currentTime = player.getCurrentTime?.() || 0
-    const subtitleIndex = findSubtitleIndexAtTime(currentTime)
-
-    currentSubtitleIndexRef.current = subtitleIndex
-    setActiveSubtitleIndex(subtitleIndex)
-
-    if (subtitleIndex >= 0) {
-      const line = subtitles[subtitleIndex]
-      if (line?.text) {
-        speakText(line.text)
-      }
-    }
-  }
+  const isRowActive = (index) => index === activeSubtitleIndex
 
   return (
     <div className="page">
@@ -487,13 +642,13 @@ export default function Home() {
         </div>
       )}
 
-      {(originalSubtitles.length > 0 || subtitles.length > 0) && (
+      {(sortedOriginalSubtitles.length > 0 || sortedTranslatedSubtitles.length > 0) && (
         <div className="subtitlesGrid">
           <div className="subCard">
             <h2>Original captions</h2>
             <div className="subList">
-              {originalSubtitles.map((line, index) => (
-                <div className="subRow" key={`o-${index}`}>
+              {sortedOriginalSubtitles.map((line, index) => (
+                <div className={`subRow ${isRowActive(index) ? 'active' : ''}`} key={`o-${index}`}>
                   <button
                     type="button"
                     className="timeButton"
@@ -501,7 +656,6 @@ export default function Home() {
                   >
                     {Number(line.start || 0).toFixed(1)}s
                   </button>
-
                   <span className="subText">{line.text}</span>
                 </div>
               ))}
@@ -511,8 +665,8 @@ export default function Home() {
           <div className="subCard">
             <h2>Translated captions</h2>
             <div className="subList">
-              {subtitles.map((line, index) => (
-                <div className="subRow" key={`o-${index}`}>
+              {sortedTranslatedSubtitles.map((line, index) => (
+                <div className={`subRow ${isRowActive(index) ? 'active' : ''}`} key={`t-${index}`}>
                   <button
                     type="button"
                     className="timeButton"
@@ -520,7 +674,6 @@ export default function Home() {
                   >
                     {Number(line.start || 0).toFixed(1)}s
                   </button>
-
                   <span className="subText">{line.text}</span>
                 </div>
               ))}

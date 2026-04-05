@@ -21,6 +21,7 @@ import com.example.translator.dto.SubtitleTranslateResponse;
 import com.example.translator.dto.TranslationProgress;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Service
