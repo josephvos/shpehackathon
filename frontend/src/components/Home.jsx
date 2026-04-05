@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import axios from 'axios'
+import apiClient from '../utils/api'
 import '../index.css'
 
 function getYouTubeId(url) {
@@ -608,7 +608,7 @@ export default function Home() {
     let pollInterval = null
 
     try {
-      const startRes = await axios.post('/api/subtitles/translate/start', {
+      const startRes = await apiClient.post('/api/subtitles/translate/start', {
         videoUrl: url,
         targetLang: lang
       })
@@ -621,7 +621,7 @@ export default function Home() {
 
       pollInterval = setInterval(async () => {
         try {
-          const progressRes = await axios.get(`/api/subtitles/translate/progress/${jobId}`)
+          const progressRes = await apiClient.get(`/api/subtitles/translate/progress/${jobId}`)
           const data = progressRes.data
 
           setProgress(data.progress || 0)

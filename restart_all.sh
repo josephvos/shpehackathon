@@ -94,7 +94,7 @@ echo
 
 # Step 4: Start Spring Boot backend
 print_status "Step 4: Starting Spring Boot backend..."
-cd /Users/joeyv/Documents/shpehackathon/shpehackathon/backend
+cd /Users/joeyv/shpe/shpehackathon/backend
 
 # Start Spring Boot in background
 nohup mvn spring-boot:run > /tmp/spring-boot.log 2>&1 &
@@ -119,7 +119,7 @@ echo
 
 # Step 5: Start Frontend
 print_status "Step 5: Starting Vite frontend..."
-cd /Users/joeyv/Documents/shpehackathon/shpehackathon/frontend
+cd /Users/joeyv/shpe/shpehackathon/frontend
 
 # Start Vite in background
 nohup npm run dev > /tmp/vite.log 2>&1 &

@@ -1,0 +1,10 @@
+{
+  "name": "youtube-video-translator-api",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "node-fetch": "^2.6.12",
+    "youtube-transcript": "^1.0.6",
+    "@vercel/node": "^2.15.0"
+  }
+}

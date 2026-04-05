@@ -16,6 +16,9 @@ keys/
 *.p12
 *.pfx
 
+# Vercel
+.vercel
+
 # Database and Logs
 # =================
 *.db
@@ -293,3 +296,4 @@ deploy-staging.*
 # KEEP THIS SECTION UPDATED
 # Add any new sensitive files here
 # ===========================================
+.env*.local

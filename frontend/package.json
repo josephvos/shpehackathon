@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "start": "vite --host"
+    "start": "vite --host",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
