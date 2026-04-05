@@ -1,8 +1,8 @@
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\controller\TranslateController.java
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\VideoTranslatorApplication.java
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\dto\SubtitleLine.java
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\dto\SubtitleTranslateRequest.java
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\service\VideoService.java
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\dto\StartTranslationResponse.java
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\dto\TranslationProgress.java
-C:\Users\caleb\Downloads\Promethea\shpehackathon\backend\src\main\java\com\example\translator\dto\SubtitleTranslateResponse.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/StartTranslationResponse.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/SubtitleTranslateRequest.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/VideoTranslatorApplication.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/controller/TranslateController.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/service/VideoService.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/TranslationProgress.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/SubtitleTranslateResponse.java
+/Users/joeyv/Documents/shpeproject-main/shpehackathon/shpehackathon/backend/src/main/java/com/example/translator/dto/SubtitleLine.java
