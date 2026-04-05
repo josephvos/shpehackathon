@@ -166,6 +166,10 @@ If you prefer to start services manually:
 # Start LibreTranslate server
 libretranslate --host 127.0.0.1 --port 5000
 
+OR
+
+python -m libretranslate --host 127.0.0.1 --port 5000
+
 # Wait for: "Loaded support for 49 languages"
 ```
 
